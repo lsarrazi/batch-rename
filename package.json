@@ -27,9 +27,8 @@
     "menus": {
       "explorer/context": [
         {
-          "when": "!explorerResourceIsFolder",
-          "group": "7_modification",
-          "command": "extension.renameBatch"
+          "command": "extension.renameBatch",
+          "group": "7_modification"
         }
       ]
     }
