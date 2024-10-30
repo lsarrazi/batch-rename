@@ -4,19 +4,19 @@ const fs = require('fs')
 const PathModule = require('path')
 
 export function activate(context: vscode.ExtensionContext) {
-    // Register the commands that are provided to the user
+    // Enregistrement de la commande
     var current_renaming
 
     let disposableRenameCommand = vscode.commands.registerCommand('extension.renameBatch', (clicked_file, selected_files) => {
         if (!selected_files) return
-        
+
         current_renaming = {
             files: []
         }
 
         selected_files.forEach(file => {
             file.basename = PathModule.basename(file.fsPath)
-            file.basepath = file.fsPath.split(file.basename).slice(0, -1).join(file.basename)
+            file.basepath = file.fsPath.substring(0, file.fsPath.lastIndexOf(file.basename))
             current_renaming.files.push(file)
         })
 
@@ -29,50 +29,71 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.workspace.openTextDocument(openPath).then(doc => {
             current_renaming.doc = doc
             vscode.window.showTextDocument(doc).then(editor => {
+                // Éditeur ouvert
             })
 
-            current_renaming.save = function() {
-            
+            // Fonction de sauvegarde modifiée pour utiliser WorkspaceEdit
+            current_renaming.save = async function() {
                 let new_names = doc.getText().split(/[\r\n]+/).filter(line => !!line);
 
                 if (current_renaming.files.length == new_names.length) {
-                    
-                    current_renaming.files.forEach((file, i) => {
+                    const edit = new vscode.WorkspaceEdit();
+                    for (let i = 0; i < current_renaming.files.length; i++) {
+                        const file = current_renaming.files[i];
                         let num = 1;
-                        let new_path = file.basepath + new_names[i];
-                        if (file.fsPath == new_path) return;
+                        let new_name = new_names[i];
+                        let new_path = PathModule.join(file.basepath, new_name);
 
-                        while (fs.existsSync(new_path)) {
-                            new_path = file.basepath + new_names[i].replace(/\.(?=[A-z0-9]*$)/, `_${num}.`);
+                        if (file.fsPath === new_path) continue;
+
+                        // Vérifier si le nouveau chemin existe déjà
+                        let adjusted_new_path = new_path;
+                        while (fs.existsSync(adjusted_new_path)) {
+                            adjusted_new_path = PathModule.join(file.basepath, new_name.replace(/\.(?=[A-z0-9]*$)/, `_${num}.`));
                             num++;
                         }
 
-                        fs.renameSync(file.fsPath, new_path)
-                    })
+                        const oldUri = vscode.Uri.file(file.fsPath);
+                        const newUri = vscode.Uri.file(adjusted_new_path);
+
+                        // Ajouter l'opération de renommage au WorkspaceEdit
+                        edit.renameFile(oldUri, newUri, { overwrite: false, ignoreIfExists: false });
+                    }
+
+                    // Appliquer les modifications
+                    const success = await vscode.workspace.applyEdit(edit);
+                    if (success) {
+                        vscode.window.showInformationMessage('Les fichiers ont été renommés avec succès et les imports ont été mis à jour.');
+                    } else {
+                        vscode.window.showErrorMessage('Échec du renommage des fichiers.');
+                    }
+
                 } else {
-                    vscode.window.showInformationMessage('The line count does not match the file selection!')
+                    vscode.window.showInformationMessage('Le nombre de lignes ne correspond pas à la sélection de fichiers !')
                 }
-                setTimeout(() => {
-                    vscode.commands.executeCommand('workbench.action.closeActiveEditor');
-                    fs.unlink(batchFilePath, (err) => {
-                        if (err) console.error(err);
-                    });
-                }, 80)
+                // Fermer l'éditeur et supprimer le fichier temporaire
+                vscode.commands.executeCommand('workbench.action.closeActiveEditor');
+                fs.unlink(batchFilePath, (err) => {
+                    if (err) console.error(err);
+                });
             }
         })
 
     })
 
-    vscode.workspace.onWillSaveTextDocument((save_event) => {
-        if (save_event.document == current_renaming.doc && save_event.reason == 1) {
-            current_renaming.save()
+    vscode.workspace.onDidSaveTextDocument(async (doc) => {
+        if (doc === current_renaming.doc) {
+            try {
+                await current_renaming.save();
+            } catch (error) {
+                vscode.window.showErrorMessage(`Erreur lors du renommage : ${error.message}`);
+            }
         }
     })
-    // push to subscriptions list so that they are disposed automatically
+    // Ajouter à la liste des abonnements pour une gestion automatique
     context.subscriptions.push(disposableRenameCommand)
 
 }
 
-
-// This method is called when extension is deactivated
+// Cette méthode est appelée lorsque l'extension est désactivée
 export function deactivate() {}
