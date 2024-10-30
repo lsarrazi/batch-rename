@@ -80,16 +80,20 @@ export function activate(context: vscode.ExtensionContext) {
             const success = await vscode.workspace.applyEdit(edit);
             if (success) {
               vscode.window.showInformationMessage(
-                "Les fichiers ont été renommés avec succès et les imports ont été mis à jour."
+                "Files renamed successfully."
               );
             } else {
               vscode.window.showErrorMessage(
-                "Échec du renommage des fichiers."
+                "An error occurred while renaming files."
               );
             }
           } else {
             vscode.window.showInformationMessage(
-              "Le nombre de lignes ne correspond pas à la sélection de fichiers !"
+              "Number of new names does not match number of files. (Expected: " +
+                current_renaming.files.length +
+                ", Got: " +
+                new_names.length +
+                ")"
             );
           }
           // Fermer l'éditeur et supprimer le fichier temporaire
