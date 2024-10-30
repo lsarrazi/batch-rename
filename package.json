@@ -9,13 +9,16 @@
     "url": "https://github.com/JannisX11/batch-rename"
   },
   "engines": {
-    "vscode": "^1.89.1"
+    "vscode": "^1.89.0"
   },
   "categories": [
     "Other"
   ],
   "icon": "icon.png",
   "main": "./out/src/extension",
+  "activationEvents": [
+    "onCommand:extension.renameBatch"
+  ],
   "contributes": {
     "commands": [
       {
@@ -36,19 +39,19 @@
   "scripts": {
     "vscode:prepublish": "tsc -p ./",
     "compile": "tsc -watch -p ./",
-    "postinstall": "node ./node_modules/vscode/bin/install",
-    "test": "node ./node_modules/vscode/bin/test"
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
     "@types/mocha": "^2.2.48",
     "@types/node": "^9.6.61",
+    "@types/vscode": "^1.89.0",
     "mocha": "^5.2.0",
-    "typescript": "^5.4.5",
-    "vscode": "^1.1.37"
+    "typescript": "^5.6.3",
+    "@vscode/vsce": "^3.2.1"
   },
   "dependencies": {
-    "opn": "^5.5.0",
-    "path": "^0.12.7"
+    "opn": "^5.5.0"
   },
   "license": "MIT",
   "keywords": [
